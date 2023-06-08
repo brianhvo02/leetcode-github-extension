@@ -1,0 +1,26 @@
+{
+    "name": "LeetCode GitHub Extension",
+    "description": "Chrome extension that commits your LeetCode exercises to GitHub",
+    "version": "1.0.0",
+    "manifest_version": 3,
+    "icons": {
+        "16": "images/icon-16.png",
+        "32": "images/icon-32.png",
+        "48": "images/icon-48.png"
+    },
+    "action": {
+        "default_popup": "popup/index.html"
+    },
+    "background": {
+        "service_worker": "background.js"
+    },
+    "content_scripts": [
+        {
+            "js": [ "scripts/content.js" ],
+            "matches": [
+                "https://leetcode.com/problems/*/submissions/*",
+                "https://leetcode.com/problems/*/description/"
+            ]
+        }
+    ]
+}
