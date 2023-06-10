@@ -11,9 +11,5 @@
   "license": "ISC",
   "devDependencies": {
     "chrome-types": "^0.1.201"
-  },
-  "dependencies": {
-    "octokit": "^2.0.19",
-    "smee-client": "^1.2.3"
   }
 }

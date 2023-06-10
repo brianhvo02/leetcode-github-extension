@@ -1,25 +1,48 @@
-const signInButton = document.getElementById('signIn');
+const h2 = document.querySelector('h2');
+const a = document.querySelector('a');
+const p = document.querySelector('p');
 
-(async () => {
-    
-    let {
-        accessToken,
-        refreshToken,
-        expiresIn,
-        refreshTokenExpiresIn
-    } = chrome.storage.session.get([
-        'accessToken',
-        'refreshToken',
-        'expiresIn',
-        'refreshTokenExpiresIn'
+const currentDate = new Date();
+
+const port = chrome.runtime.connect({ name: 'popup' });
+port.postMessage({ type: 'login' });
+
+const setInfo = async () => {
+    const {
+        username,
+        name,
+        repoName,
+        repoUrl,
+        totalCommits
+    } = await chrome.storage.sync.get([
+        'username',
+        'name',
+        'repoName',
+        'repoUrl',
+        'totalCommits'
     ]);
-    if (!chrome.storage.session.get('accessToken').accessToken) {
-        await chrome.runtime.sendMessage({ type: 'login' });
-    }
-    console.log(
-        accessToken,
-        refreshToken,
-        expiresIn,
-        refreshTokenExpiresIn
-    )
-})();
+
+
+    h2.textContent = `${name} (${username})`;
+    a.textContent = repoName;
+    a.href = repoUrl;
+    p.textContent = `Current total commits: ${totalCommits}`;
+}
+
+port.onMessage.addListener(async request => {
+    try {
+        switch (request.type) {
+            case 'loginSuccess':
+                await setInfo();
+                break;
+            case 'loginFailure':
+                h2.textContent = 'Login failure!';
+                break;
+            default:
+                throw new Error('No type given in message')
+        }
+    } catch (e) {
+        console.error(e);
+    }  
+});
+

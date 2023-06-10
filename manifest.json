@@ -12,19 +12,19 @@
         "default_popup": "popup/index.html"
     },
     "background": {
-        "service_worker": "background.js"
+        "service_worker": "scripts/background.js"
     },
     "content_scripts": [
         {
             "js": [ "scripts/content.js" ],
             "matches": [
-                "https://leetcode.com/problems/*/submissions/*",
-                "https://leetcode.com/problems/*/description/"
+                "https://leetcode.com/problems/*"
             ]
         }
     ],
     "permissions": [
         "identity",
         "storage"
-    ]
+    ],
+    "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlJhMrDzM7LAfrnW9VXzJ7UKJo/BMGhwbS3ZoIi9PRflyaH4LU8Wi86ylSRVzD7zatc1bjFQPSyN5htugdfJBEhcEy7GcMj+wsmcgarLJA9pZ+B55fpdg7rPOSzYApNQ/F8dqxRXg9thqZqk9H7Mq3kh75/elRVUQ5em0V/zLg0o9Thbxyy3fwfEmpTmNylE0EcHKNYv9TngYE0xFC+z9vznKF893P8N0vPCmbDc7BtPHdt5Bs5+O/Aerwc/hFlYFCwNnGAxd94IAojUuYFr2nE+f9BeJAunkx9gtE1SYvzE8LxxvYsikul13J++CTZMHi5CijfITlG1VNuLYlKhe2QIDAQAB"
 }
