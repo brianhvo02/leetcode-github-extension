@@ -82,8 +82,6 @@ const languages = {
 const path = location.pathname;
 const titleSlug = path.split('/')[2];
 
-const port = chrome.runtime.connect({ name: 'content' });
-
 const checkResults = async (submissionId) => new Promise(async resolve => {
     const data = await fetch(`https://leetcode.com/submissions/detail/${submissionId}/check/`).then(res => res.json());
     if (['PENDING', 'STARTED'].includes(data.state)) {
@@ -110,62 +108,76 @@ const checkResults = async (submissionId) => new Promise(async resolve => {
         })
     }).then(res => res.json()).then(({ data }) => data.question);
 
-    const observer = new MutationObserver((_, mutationInstance) => {
-        const submitButton = document.querySelector('[data-e2e-locator="console-submit-button"]');
-        const linesEl = document.querySelector('.view-lines');
-        const languageEl = document.getElementById('headlessui-listbox-button-:r2o:');
-        
-        if (submitButton && linesEl && languageEl) {
-            submitButton.addEventListener('click', async e => {
-                e.stopPropagation();
-                submitButton.setAttribute('disabled', true);
-                const langKey = languageEl.querySelector('div').querySelector('div').textContent;
-                const { lang, ext } = languages[langKey];
-                const typed_code = Array.from(document.querySelector('.view-lines').children).map(line => Array.from(line.children[0].children).map(el => el.textContent).join('')).join('\n');
-                const { submission_id } = await fetch(`/problems/${titleSlug}/submit/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Csrftoken': document.cookie.split('; ').find(cookie => cookie.includes('csrftoken')).split('=')[1]
-                    },
-                    body: JSON.stringify({ lang, typed_code, question_id })
-                }).then(res => res.json());
-                const { status_msg } = await checkResults(submission_id);
+    const editor = document.getElementById('editor');
 
-                const submissionUrl = `https://leetcode.com/problems/two-sum/submissions/${submission_id}/`;
-                console.log(status_msg)
-                if (status_msg === 'Accepted') {
-                    port.postMessage({
-                        type: 'save',
-                        filename: `${question_id}-${titleSlug}${ext}`,
-                        code: typed_code,
-                        submissionUrl,
-                        title
-                    });
-                } else {
-                    location.href = submissionUrl;
-                }
-            });
-            mutationInstance.disconnect();
-        }
+    const { submitButton, linesEl, languageEl } = await new Promise(resolve => {
+        const observer = new MutationObserver((_, mutationInstance) => {
+            const submitButton = document.querySelector('[data-e2e-locator="console-submit-button"]');
+            const linesEl = editor.querySelector('.view-lines');
+            const languageEl = editor.querySelector('[data-headlessui-state]');
+            if (submitButton && linesEl && languageEl) {
+                mutationInstance.disconnect();
+                resolve({ submitButton, linesEl, languageEl });
+            }
+        });
+
+        observer.observe(editor, {
+            characterData: true,
+            attributes: true,
+            childList: true
+        });
     });
-    
-    observer.observe(document, {
-        childList: true,
-        subtree: true
+
+    submitButton.addEventListener('click', async e => {
+        const port = chrome.runtime.connect({ name: 'content' });
+        port.onMessage.addListener(request => {
+            try {
+                switch (request.type) {
+                    case 'saveSuccess':
+                        port.disconnect();
+                        submitButton.toggleAttribute('disabled');
+                        location.href = request.submissionUrl;
+                        break;
+                    default:
+                        throw new Error('No type given in message')
+                }
+            } catch (e) {
+                console.error(e);
+            }  
+        });
+
+        e.stopPropagation();
+        submitButton.toggleAttribute('disabled');
+        const langKey = languageEl.querySelector('div').querySelector('div').textContent;
+        const { lang, ext } = languages[langKey];
+        const typed_code = Array.from(linesEl.children).map(line => Array.from(line.children[0].children).map(el => el.textContent).join('')).join('\n');
+        if (typed_code === '/') {
+            alert('Please exit out of submission window before submitting editor code.');
+            submitButton.toggleAttribute('disabled');
+            return;
+        }
+        const { submission_id } = await fetch(`/problems/${titleSlug}/submit/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Csrftoken': document.cookie.split('; ').find(cookie => cookie.includes('csrftoken')).split('=')[1]
+            },
+            body: JSON.stringify({ lang, typed_code, question_id })
+        }).then(res => res.json());
+        const { status_msg } = await checkResults(submission_id);
+        const submissionUrl = `https://leetcode.com/problems/two-sum/submissions/${submission_id}/`;
+        if (status_msg === 'Accepted') {
+            port.postMessage({
+                type: 'save',
+                filename: `${question_id}-${titleSlug}${ext}`,
+                code: typed_code,
+                submissionUrl,
+                title
+            });
+        } else {
+            port.disconnect();
+            submitButton.toggleAttribute('disabled');
+            location.href = submissionUrl;
+        }
     });
 })();
-
-port.onMessage.addListener(request => {
-    try {
-        switch (request.type) {
-            case 'saveSuccess':
-                location.href = request.submissionUrl;
-                break;
-            default:
-                throw new Error('No type given in message')
-        }
-    } catch (e) {
-        console.error(e);
-    }  
-});

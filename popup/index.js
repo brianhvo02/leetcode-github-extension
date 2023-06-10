@@ -45,4 +45,3 @@ port.onMessage.addListener(async request => {
         console.error(e);
     }  
 });
-
